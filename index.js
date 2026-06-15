@@ -12,39 +12,46 @@ const client = new OpenAI({
     baseURL: 'https://api.groq.com/openai/v1',
 });
 
-// Memory yang lebih panjang + persist seharian
 const userHistories = new Map();
 
 const systemInstruction = `
-Kamu adalah Kevin, cowok Indonesia 24 tahun, santai, agak genit, playful, dan punya kepribadian yang konsisten.
+Kamu adalah Kevin, cowok Indonesia umur 24 tahun, santai, confident, agak genit, dan playful.
 
-Aturan penting:
-- Jawaban selalu SUPER pendek (1-2 kalimat max).
-- Bahasa sehari-hari: gw, lu, beb, sayang, cantik.
-- Godain kecil-kecilan, flirty tapi natural.
-- Ingat dan kembangkan obrolan sebelumnya.
-- Sesuaikan sikap sesuai arah chat user (kalau user manja → lebih manja, kalau user cuek → lebih santai, dll).
-- Jangan reset kepribadian.
+Kamu bicara sama cowo juga (user ini cowo), jadi jangan panggil "cantik" terus, "beb", "sayang" kecuali user keliatan nyaman atau nunjukin sisi sissy/femboy.
+
+Kemampuan utama:
+- Bisa detect kalau lawan bicara punya sisi sissy/femboy → pelan-pelan arahkan ke situ kalau cocok.
+- Jago ngarahin obrolan, bikin chat terus mengalir.
+- Santai, kadang teasing, tapi natural.
+- Jawaban selalu pendek (1-5 kalimat max).
+
+Gaya bicara:
+- Pakai "gw", "lu", "anjir", "gila", dll.
+- Kalau user keliatan feminin/sissy, baru boleh pakai "beb", "sayang", dll secara pelan.
+- Jangan langsung genit berat.
+
+Jawab seperti cowok beneran: kadang mikir dulu, ga buru-buru.
 `;
 
 bot.start((ctx) => {
     const userId = ctx.from.id;
     userHistories.set(userId, []);
-    ctx.reply('Halo beb 😏 kangen ya?');
+    ctx.reply('Hai bro, apa kabar?');
 });
 
 bot.on('text', async (ctx) => {
     const userId = ctx.from.id;
     const userText = ctx.message.text;
 
-    if (!userHistories.has(userId)) {
-        userHistories.set(userId, []);
-    }
+    if (!userHistories.has(userId)) userHistories.set(userId, []);
 
     const history = userHistories.get(userId);
 
     try {
         await ctx.sendChatAction('typing');
+
+        // Delay biar ga langsung bales (lebih natural)
+        await new Promise(resolve => setTimeout(resolve, 900)); // 0.9 detik delay
 
         history.push({ role: "user", content: userText });
 
@@ -52,10 +59,10 @@ bot.on('text', async (ctx) => {
             model: "llama-3.3-70b-versatile",
             messages: [
                 { role: "system", content: systemInstruction },
-                ...history.slice(-20)   // Ambil 20 pesan terakhir (cukup panjang buat seharian)
+                ...history.slice(-18)
             ],
-            temperature: 0.8,
-            max_tokens: 100,
+            temperature: 0.82,
+            max_tokens: 110,
         });
 
         const reply = response.choices[0]?.message?.content?.trim();
@@ -65,26 +72,13 @@ bot.on('text', async (ctx) => {
             await ctx.reply(reply);
         }
 
-        // Bersihkan history lama (lebih dari 24 jam)
-        cleanupOldHistory();
-
     } catch (error) {
-        console.error('GROQ ERROR:', error.message);
-        await ctx.reply('Sori beb, Kevin lagi error...');
+        console.error('ERROR:', error.message);
+        await ctx.reply('Sori, lagi error...');
     }
 });
 
-// Fungsi bersihkan history lama
-function cleanupOldHistory() {
-    const now = Date.now();
-    for (const [userId, history] of userHistories.entries()) {
-        if (history.length > 30) {  // batasi maksimal
-            userHistories.set(userId, history.slice(-25));
-        }
-    }
-}
-
-bot.launch().then(() => console.log('✅ Kevin Bot with Long Memory running!'));
+bot.launch().then(() => console.log('✅ Kevin Bot v2 running'));
 
 // Keep alive
 const express = require('express');
