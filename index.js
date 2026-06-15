@@ -48,3 +48,11 @@ bot.launch().then(() => console.log('udah ready nih!'));
 // Graceful stop
 process.once('SIGINT', () => bot.stop('SIGINT'));
 process.once('SIGTERM', () => bot.stop('SIGTERM'));
+
+// Kode pancingan biar Render gak error nyari Port website
+const express = require('express');
+const app = express();
+const PORT = process.env.PORT || 3000;
+app.get('/', (req, res) => res.send('Bot Online!'));
+app.listen(PORT, () => console.log(`Listening on port ${PORT}`));
+
