@@ -1,15 +1,15 @@
 const { Telegraf } = require('telegraf');
 const OpenAI = require('openai');
+require('dotenv').config();
 
-// Ambil dari .env (WAJIB pake dotenv biar aman)
 const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN;
-const XAI_API_KEY = process.env.XAI_API_KEY;   // Grok API key
+const GROQ_API_KEY = process.env.GROQ_API_KEY;   // ← Ganti ini
 
 const bot = new Telegraf(TELEGRAM_TOKEN);
 
 const client = new OpenAI({
-    apiKey: XAI_API_KEY,
-    baseURL: 'https://api.x.ai/v1',
+    apiKey: GROQ_API_KEY,
+    baseURL: 'https://api.groq.com/openai/v1',
 });
 
 // System prompt yang lebih ketat biar ga lebay & ga suka manjang tiba-tiba
@@ -42,27 +42,21 @@ bot.on('text', async (ctx) => {
         await ctx.sendChatAction('typing');
 
         const response = await client.chat.completions.create({
-            model: "grok-4.3",           // atau "grok-4.3-latest"
+            model: "llama-3.3-70b-versatile",     // atau "llama-3.1-8b-instant" (lebih hemat)
             messages: [
                 { role: "system", content: systemInstruction },
                 { role: "user", content: ctx.message.text }
             ],
-            temperature: 0.75,
-            max_tokens: 120,          // ← Ini yang paling penting biar ga manjang!
-            presence_penalty: 0.3,
+            temperature: 0.8,
+            max_tokens: 100,
         });
 
-        const replyText = response.choices[0]?.message?.content?.trim();
-
-        if (replyText) {
-            await ctx.reply(replyText);
-        } else {
-            await ctx.reply('Aduh, Kevin lagi lemot nih..');
-        }
+        const reply = response.choices[0]?.message?.content?.trim();
+        await ctx.reply(reply || "Kevin lagi bingung nih..");
 
     } catch (error) {
-        console.error('Error:', error);
-        await ctx.reply('Sori beb, lagi error bentar..');
+        console.error(error.message);
+        await ctx.reply('Sori beb, Kevin lagi error...');
     }
 });
 
