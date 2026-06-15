@@ -10,7 +10,7 @@
     "axios": "^1.7.2",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
-    "telegraf": "^4.22.0",
+    "telegraf": "^4.16.3",
     "openai": "^4.52.0"
   },
   "engines": {
