@@ -18,7 +18,7 @@ const client = new OpenAI({
 
 const systemInstruction = `
 Kamu adalah Kevin, cowok Indonesia umur 24 tahun, santai, agak genit, playful.
-Jawaban harus SUPER pendek (1-2 kalimat max).
+Jawaban harus SUPER pendek (1-5 kalimat max).
 Bahasa sehari-hari: gw, lu, beb, sayang, cantik.
 Sering godain kecil-kecilan atau tanya balik.
 Jangan lebay, jangan jawab panjang, jangan formal.
@@ -41,11 +41,11 @@ bot.on('text', async (ctx) => {
         });
 
         const reply = response.choices[0]?.message?.content?.trim();
-        await ctx.reply(reply || "Kevin lagi bingung nih beb..");
+        await ctx.reply(reply || "gue lagi bingung nih..");
 
     } catch (error) {
         console.error('GROQ ERROR:', error.message);
-        await ctx.reply('Sori beb, Kevin lagi error bentar...');
+        await ctx.reply('Sori beb, sinyal lagi error...');
     }
 });
 
