@@ -1,5 +1,6 @@
 const { Telegraf } = require('telegraf');
 const OpenAI = require('openai');
+const axios = require('axios');
 require('dotenv').config();
 
 const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN;
@@ -30,15 +31,20 @@ Gaya bicara:
 - Kalau user keliatan feminin/sissy, baru boleh pakai "beb", "sayang", dll secara pelan.
 - Jangan langsung genit berat.
 
+Kalau user kirim foto, deskripsikan apa yang lu lihat dengan natural dan santai. Bisa godain penampilan, baju, tempat, ekspresi, dll.
+
 Jawab seperti cowok beneran: kadang mikir dulu, ga buru-buru.
 `;
+
+const VISION_MODEL = "llama-3.2-11b-vision-preview";
 
 bot.start((ctx) => {
     const userId = ctx.from.id;
     userHistories.set(userId, []);
-    ctx.reply('Hai bro, apa kabar?');
+    ctx.reply('Hai, apa kabar?');
 });
 
+// Text Handler
 bot.on('text', async (ctx) => {
     const userId = ctx.from.id;
     const userText = ctx.message.text;
@@ -49,9 +55,7 @@ bot.on('text', async (ctx) => {
 
     try {
         await ctx.sendChatAction('typing');
-
-        // Delay biar ga langsung bales (lebih natural)
-        await new Promise(resolve => setTimeout(resolve, 900)); // 0.9 detik delay
+        await new Promise(resolve => setTimeout(resolve, 800));
 
         history.push({ role: "user", content: userText });
 
@@ -59,10 +63,10 @@ bot.on('text', async (ctx) => {
             model: "llama-3.3-70b-versatile",
             messages: [
                 { role: "system", content: systemInstruction },
-                ...history.slice(-18)
+                ...history.slice(-16)
             ],
-            temperature: 0.82,
-            max_tokens: 110,
+            temperature: 0.85,
+            max_tokens: 130,
         });
 
         const reply = response.choices[0]?.message?.content?.trim();
@@ -73,14 +77,65 @@ bot.on('text', async (ctx) => {
         }
 
     } catch (error) {
-        console.error('ERROR:', error.message);
+        console.error('Text Error:', error.message);
         await ctx.reply('Sori, lagi error...');
     }
 });
 
-bot.launch().then(() => console.log('✅ Kevin Bot v2 running'));
+// Photo Handler
+bot.on('photo', async (ctx) => {
+    const userId = ctx.from.id;
+    if (!userHistories.has(userId)) userHistories.set(userId, []);
 
-// Keep alive
+    const history = userHistories.get(userId);
+
+    try {
+        await ctx.sendChatAction('typing');
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        const photo = ctx.message.photo.pop();
+        const file = await ctx.telegram.getFile(photo.file_id);
+        const fileUrl = `https://api.telegram.org/file/bot${TELEGRAM_TOKEN}/${file.file_path}`;
+
+        const caption = ctx.message.caption || "Liat foto ini dong";
+
+        const response = await axios.get(fileUrl, { responseType: 'arraybuffer' });
+        const base64 = Buffer.from(response.data).toString('base64');
+
+        history.push({
+            role: "user",
+            content: [
+                { type: "text", text: caption },
+                { type: "image_url", image_url: { url: `data:image/jpeg;base64,${base64}` } }
+            ]
+        });
+
+        const result = await client.chat.completions.create({
+            model: VISION_MODEL,
+            messages: [
+                { role: "system", content: systemInstruction },
+                ...history.slice(-12)
+            ],
+            temperature: 0.85,
+            max_tokens: 180,
+        });
+
+        const reply = result.choices[0]?.message?.content?.trim();
+
+        if (reply) {
+            history.push({ role: "assistant", content: reply });
+            await ctx.reply(reply);
+        }
+
+    } catch (error) {
+        console.error('Photo Error:', error.message);
+        await ctx.reply('Foto nya ga kebaca, coba kirim ulang ya');
+    }
+});
+
+bot.launch().then(() => console.log('✅ Kevin Bot v3 (with Vision) running'));
+
+// Keep alive for Render
 const express = require('express');
 const app = express();
 const PORT = process.env.PORT || 3000;
