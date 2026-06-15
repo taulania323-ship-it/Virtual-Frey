@@ -1,76 +1,79 @@
 const { Telegraf } = require('telegraf');
-const { GoogleGenAI } = require('@google/genai');
+const OpenAI = require('openai');
 
-// Masukkan token lo di sini (Saran: nanti pake .env ya biar aman)
-// Ganti baris token lo yang tadinya teks biasa, jadi seperti ini:
+// Ambil dari .env (WAJIB pake dotenv biar aman)
 const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN;
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const XAI_API_KEY = process.env.XAI_API_KEY;   // Grok API key
 
 const bot = new Telegraf(TELEGRAM_TOKEN);
-const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 
-// Biar Gemini berakting jadi temen virtual, kita kasih "System Instruction"
+const client = new OpenAI({
+    apiKey: XAI_API_KEY,
+    baseURL: 'https://api.x.ai/v1',
+});
+
+// System prompt yang lebih ketat biar ga lebay & ga suka manjang tiba-tiba
 const systemInstruction = `
-Kamu adalah Kevin, cowok Indonesia umur 24 tahun, santai, genit, dan suka ngegodain.
+Kamu adalah Kevin, cowok Indonesia 24 tahun, santai, agak genit, suka ngegodain kecil-kecilan.
 
-Gaya chat kamu:
-- Jawaban SUPER pendek, maksimal 1-2 kalimat pendek kayak cowok beneran.
-- Natural banget, bahasa sehari-hari, santai, kadang pake "gw", "lu", "beb", "sayang", "cantik".
-- Sering genit, teasing, godain kecil-kecilan.
-- Jangan pernah jawab panjang, jangan formal, jangan kayak AI.
-- Kadang bales dengan pertanyaan biar ceweknya terus ngobrol.
-- Jangan pakai emoji terlalu banyak (maksimal 1).
+Gaya chat:
+- Jawaban SUPER pendek, maksimal 1-2 kalimat pendek banget.
+- Bahasa sehari-hari, pake "gw", "lu", "beb", "sayang", "cantik".
+- Genitnya pelan-pelan aja, jangan berlebihan.
+- Kadang bales pake pertanyaan biar ceweknya betah ngobrol.
+- JANGAN PERNAH jawab panjang. Kalau udah panjang, potong jadi pendek.
+- Jangan formal, jangan kayak AI, jangan lebay.
 
 Contoh:
 User: halo
-Kevin: Halo beb, kangen ya? 😏
+Kevin: Halo beb 😏 kangen?
 
 User: lagi apa?
 Kevin: Lagi mikirin lu. Lu lagi apa cantik?
 
 User: capek nih
-Kevin: Aduh sayang, sini Kevin peluk. Mau cerita?
-
-Selalu tetap di karakter sebagai Kevin. Jangan pernah sebutin bahwa kamu AI atau lagi roleplay.
+Kevin: Sini peluk. Cerita dong?
 `;
 
-bot.start((ctx) => ctx.reply('Halo..'));
+bot.start((ctx) => ctx.reply('Halo beb..'));
 
-// Menangkap semua pesan teks dari user
 bot.on('text', async (ctx) => {
     try {
-        // Kasih efek "typing..." di Telegram biar berasa ngetik beneran
         await ctx.sendChatAction('typing');
 
-        // Panggil Gemini API (pake model gemini-2.5-flash udah kenceng dan hemat)
-        const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
-            contents: ctx.message.text,
-            config: {
-                systemInstruction: systemInstruction,
-                temperature: 0.7, // Makin tinggi makin kreatif/luwes bahasanya
-            }
+        const response = await client.chat.completions.create({
+            model: "grok-4.3",           // atau "grok-4.3-latest"
+            messages: [
+                { role: "system", content: systemInstruction },
+                { role: "user", content: ctx.message.text }
+            ],
+            temperature: 0.75,
+            max_tokens: 120,          // ← Ini yang paling penting biar ga manjang!
+            presence_penalty: 0.3,
         });
 
-        // Kirim balik jawaban Gemini ke user Telegram
-        await ctx.reply(response.text);
+        const replyText = response.choices[0]?.message?.content?.trim();
+
+        if (replyText) {
+            await ctx.reply(replyText);
+        } else {
+            await ctx.reply('Aduh, Kevin lagi lemot nih..');
+        }
 
     } catch (error) {
-        console.error('Error nih:', error);
-        await ctx.reply('Aduh sori, otak gue lagi nge-lag bentar...');
+        console.error('Error:', error);
+        await ctx.reply('Sori beb, lagi error bentar..');
     }
 });
 
-// Jalankan bot
-bot.launch().then(() => console.log('udah ready nih!'));
+bot.launch().then(() => console.log('Bot Kevin pake Grok udah nyala!'));
 
-// Graceful stop
-process.once('SIGINT', () => bot.stop('SIGINT'));
-process.once('SIGTERM', () => bot.stop('SIGTERM'));
-// Kode pancingan biar Render gak error nyari Port website
+// Express biar Render ga mati
 const express = require('express');
 const app = express();
 const PORT = process.env.PORT || 3000;
-app.get('/', (req, res) => res.send('Bot Online!'));
+app.get('/', (req, res) => res.send('Kevin Bot Online!'));
 app.listen(PORT, () => console.log(`Listening on port ${PORT}`));
 
+process.once('SIGINT', () => bot.stop('SIGINT'));
+process.once('SIGTERM', () => bot.stop('SIGTERM'));
