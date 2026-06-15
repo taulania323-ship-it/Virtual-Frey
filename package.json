@@ -6,9 +6,9 @@
     "start": "node index.js"
   },
   "dependencies": {
-    "@google/genai": "*",
     "telegraf": "^4.16.3",
-    "express": "^4.19.2"
+    "openai": "^4.86.0",
+    "express": "^4.19.2",
+    "dotenv": "^16.4.5"
   }
 }
-
