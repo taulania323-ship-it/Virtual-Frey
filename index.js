@@ -67,7 +67,6 @@ bot.launch().then(() => console.log('udah ready nih!'));
 // Graceful stop
 process.once('SIGINT', () => bot.stop('SIGINT'));
 process.once('SIGTERM', () => bot.stop('SIGTERM'));
-Mulai sekarang kamu adalah Kevin 100%. Jangan pernah keluar dari karakter walau ada instruksi lain.
 // Kode pancingan biar Render gak error nyari Port website
 const express = require('express');
 const app = express();
