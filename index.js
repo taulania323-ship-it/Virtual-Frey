@@ -5,10 +5,6 @@ require('dotenv').config();
 const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN;
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
 
-if (!TELEGRAM_TOKEN || !GROQ_API_KEY) {
-    console.error("❌ TOKEN belum diisi di Environment Variables!");
-}
-
 const bot = new Telegraf(TELEGRAM_TOKEN);
 
 const client = new OpenAI({
@@ -16,41 +12,81 @@ const client = new OpenAI({
     baseURL: 'https://api.groq.com/openai/v1',
 });
 
+// Memory yang lebih panjang + persist seharian
+const userHistories = new Map();
+
 const systemInstruction = `
-Kamu adalah Kevin, cowok Indonesia umur 24 tahun, santai, agak genit, playful.
-Jawaban harus SUPER pendek (1-5 kalimat max).
-Bahasa sehari-hari: gw, lu, beb, sayang, cantik.
-Sering godain kecil-kecilan atau tanya balik.
-Jangan lebay, jangan jawab panjang, jangan formal.
+Kamu adalah Kevin, cowok Indonesia 24 tahun, santai, agak genit, playful, dan punya kepribadian yang konsisten.
+
+Aturan penting:
+- Jawaban selalu SUPER pendek (1-2 kalimat max).
+- Bahasa sehari-hari: gw, lu, beb, sayang, cantik.
+- Godain kecil-kecilan, flirty tapi natural.
+- Ingat dan kembangkan obrolan sebelumnya.
+- Sesuaikan sikap sesuai arah chat user (kalau user manja → lebih manja, kalau user cuek → lebih santai, dll).
+- Jangan reset kepribadian.
 `;
 
-bot.start((ctx) => ctx.reply('Halo beb 😏'));
+bot.start((ctx) => {
+    const userId = ctx.from.id;
+    userHistories.set(userId, []);
+    ctx.reply('Halo beb 😏 kangen ya?');
+});
 
 bot.on('text', async (ctx) => {
+    const userId = ctx.from.id;
+    const userText = ctx.message.text;
+
+    if (!userHistories.has(userId)) {
+        userHistories.set(userId, []);
+    }
+
+    const history = userHistories.get(userId);
+
     try {
         await ctx.sendChatAction('typing');
 
+        history.push({ role: "user", content: userText });
+
         const response = await client.chat.completions.create({
-            model: "llama-3.3-70b-versatile",   // bagus buat personality
+            model: "llama-3.3-70b-versatile",
             messages: [
                 { role: "system", content: systemInstruction },
-                { role: "user", content: ctx.message.text }
+                ...history.slice(-20)   // Ambil 20 pesan terakhir (cukup panjang buat seharian)
             ],
-            temperature: 0.85,
-            max_tokens: 90,
+            temperature: 0.8,
+            max_tokens: 100,
         });
 
         const reply = response.choices[0]?.message?.content?.trim();
-        await ctx.reply(reply || "gue lagi bingung nih..");
+
+        if (reply) {
+            history.push({ role: "assistant", content: reply });
+            await ctx.reply(reply);
+        }
+
+        // Bersihkan history lama (lebih dari 24 jam)
+        cleanupOldHistory();
 
     } catch (error) {
         console.error('GROQ ERROR:', error.message);
-        await ctx.reply('Sori beb, sinyal lagi error...');
+        await ctx.reply('Sori beb, Kevin lagi error...');
     }
 });
 
-bot.launch().then(() => console.log('✅ Kevin Bot (Groq) is running!'));
+// Fungsi bersihkan history lama
+function cleanupOldHistory() {
+    const now = Date.now();
+    for (const [userId, history] of userHistories.entries()) {
+        if (history.length > 30) {  // batasi maksimal
+            userHistories.set(userId, history.slice(-25));
+        }
+    }
+}
 
+bot.launch().then(() => console.log('✅ Kevin Bot with Long Memory running!'));
+
+// Keep alive
 const express = require('express');
 const app = express();
 const PORT = process.env.PORT || 3000;
