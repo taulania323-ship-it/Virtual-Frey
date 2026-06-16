@@ -36,7 +36,7 @@ Kalau user kirim foto, deskripsikan apa yang lu lihat dengan natural dan santai.
 Jawab seperti cowok beneran: kadang mikir dulu, ga buru-buru.
 `;
 
-const VISION_MODEL = "llama-3.2-11b-vision-preview";
+const VISION_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct";
 
 bot.start((ctx) => {
     const userId = ctx.from.id;
@@ -117,7 +117,7 @@ bot.on('photo', async (ctx) => {
                 ...history.slice(-12)
             ],
             temperature: 0.85,
-            max_tokens: 180,
+            max_tokens: 200,
         });
 
         const reply = result.choices[0]?.message?.content?.trim();
@@ -133,9 +133,9 @@ bot.on('photo', async (ctx) => {
     }
 });
 
-bot.launch().then(() => console.log('✅ Kevin Bot v3 (with Vision) running'));
+bot.launch().then(() => console.log('✅ Kevin Bot v4 (Vision Fixed) running'));
 
-// Keep alive for Render
+// Keep alive
 const express = require('express');
 const app = express();
 const PORT = process.env.PORT || 3000;
