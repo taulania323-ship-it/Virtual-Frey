@@ -49,7 +49,7 @@ bot.on('text', async (ctx) => {
         history.push({ role: "user", content: userText });
 
         const response = await ai.models.generateContent({
-            model: 'gemini-2.5-pro',
+            model: 'gemini-2.5-flash',
             contents: ctx.message.text,
             config: {
                 systemInstruction: systemInstruction,
@@ -67,7 +67,7 @@ bot.on('text', async (ctx) => {
 
     } catch (error) {
         console.error('Gemini Error:', error);
-        await ctx.reply('Sori, gue lagi lemot nih...');
+        await ctx.reply('wait ya..');
     }
 });
 
