@@ -1,19 +1,14 @@
 {
-  "name": "kevin-bot",
+  "name": "bot-temen-virtual",
   "version": "1.0.0",
-  "description": "Kevin Telegram Bot",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
-    "axios": "^1.7.2",
-    "dotenv": "^16.4.5",
-    "express": "^4.19.2",
     "telegraf": "^4.16.3",
-    "openai": "^4.52.0"
-  },
-  "engines": {
-    "node": ">=18"
+    "@google/genai": "*",
+    "express": "^4.19.2",
+    "dotenv": "^16.4.5"
   }
 }
